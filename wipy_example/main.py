@@ -1,3 +1,8 @@
+"""
+`adafruit_mlx90640` micropython example code
+================================================================================
+* Author(s): Avishek Guha (avsg8, @avs_g8)
+"""
 import pycom, machine, micropython, time   # Some libraries that we will use
 from machine import I2C
 import busio, adafruit_mlx90640
