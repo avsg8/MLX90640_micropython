@@ -20,6 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
+
+"""
+---------------------------------------------------------------------------------------------------------------------------------------
+Please note: The following code has been modified from its original form at certain places so that it can work with Wipy3.0 micropython
+---------------------------------------------------------------------------------------------------------------------------------------
+Modifying author: avsg8, @avs_g8
+"""
+
 """
 `adafruit_bus_device.i2c_device` - I2C Bus Device
 ====================================================
@@ -61,7 +69,7 @@ class I2CDevice:
 
     def __init__(self, i2c, device_address, probe=True):
         self.i2c = i2c
-        self._has_write_read = False #hasattr(self.i2c, "writeto_then_readfrom")
+        self._has_write_read = False """ hasattr(self.i2c, "writeto_then_readfrom") --> has been turned to False since the """
         self.device_address = device_address
 
         if probe:
@@ -158,10 +166,10 @@ class I2CDevice:
 
         else:
             # If we don't have a special implementation, we can fake it with two calls
-            self.i2c.writeto(self.device_address, out_buffer, stop=False)
+            self.i2c.writeto(self.device_address, out_buffer, stop=False) """ These lines have been changed to make it work with wipy micropython I2C module """
             #self.write(out_buffer, start=out_start, end=out_end, stop=False)
             #self.readinto(in_buffer, start=in_start, end=in_end)
-            self.i2c.readfrom_into(self.device_address, in_buffer)
+            self.i2c.readfrom_into(self.device_address, in_buffer) """ These lines have been changed to make it work with wipy micropython I2C module """
 
 
     # pylint: enable-msg=too-many-arguments

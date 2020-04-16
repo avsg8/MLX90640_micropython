@@ -19,6 +19,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
+
+"""
+---------------------------------------------------------------------------------------------------------------------------------------
+Please note: The following code has been modified from its original form at certain places so that it can work with Wipy3.0 micropython
+---------------------------------------------------------------------------------------------------------------------------------------
+Modifying author: avsg8, @avs_g8
+"""
 """
 `adafruit_mlx90640`
 ================================================================================

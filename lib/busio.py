@@ -1,3 +1,11 @@
+
+"""
+---------------------------------------------------------------------------------------------------------------------------------------
+Please note: The following code has been modified from its original form at certain places so that it can work with Wipy3.0 micropython
+---------------------------------------------------------------------------------------------------------------------------------------
+Modifying author: avsg8, @avs_g8
+"""
+
 """
 `busio` - Bus protocol support like I2C and SPI
 =================================================
@@ -55,7 +63,9 @@ class I2C(Lockable):
                 return self._i2c.writeto(address, memoryview(buffer)[start:end], stop=stop)
         return self._i2c.writeto(address, buffer, stop=stop)
 
-
+    """
+    The following method does not exist in wipy3.0 micropython. To minimize code chopping, we will keep it, but just change line 72 of i2c_device.py to "false" in te __init__ method
+    """
     def writeto_then_readfrom(self, address, buffer_out, buffer_in, *, out_start=0, out_end=None, in_start=0, in_end=None, stop=False):
         return self._i2c.writeto_then_readfrom(address, buffer_out, buffer_in,
                                                out_start=out_start, out_end=out_end,
