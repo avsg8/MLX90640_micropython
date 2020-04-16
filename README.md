@@ -9,4 +9,4 @@ Once it was tested that the sensor was working correctly using the drivers in th
 The adafruit_mlx90640.py is untouced. Only the busio.py and i2c_device.py has been modified to enable reading of raw data from the sensor.
 
 ### How to use it:
-Just copy the contents of wipy_example to your WiPy 3.0 and boot the microcontroller. If you are connected to a console, you can see the max, min and ambient temperatures being printed out. If you don't have a console, then the alternate flashing of the blue and red led means it is successfully reading data. A red flash means an error occured. 
+Just copy the contents of wipy_example to your WiPy 3.0 and boot the microcontroller. If you are connected to a console, you can see the max, min and ambient temperatures being printed out. If you don't have a console, then the alternate flashing of the blue and green led means it is successfully reading data. A red flash means an error occured. 
