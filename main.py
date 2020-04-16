@@ -10,11 +10,11 @@ import struct, busio, adafruit_mlx90640, json
 pycom.heartbeat(False)
 
 # # Wireless network
-WIFI_SSID = "PINK"
-WIFI_PASS = "enidblyton" # No this is not our regular password. :)
+WIFI_SSID = "your_wifi_ssid"
+WIFI_PASS = "your_wifi_pwd" # No this is not our regular password. :)
 #
 # # MQTT Broker on Rpi-home
-AIO_SERVER = "192.168.1.7"
+AIO_SERVER = "192.xxx.xxx.xxx"
 AIO_PORT = 1883
 AIO_CLIENT_ID = ubinascii.hexlify(machine.unique_id())  # Can be anything
 AIO_CONTROL_FEED = "RoomCond"
