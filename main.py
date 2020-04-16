@@ -22,6 +22,7 @@ try:
     mlx._GetFrameData(amb)
     amb = mlx._GetTa(amb) - 8.0  # this is ambient temp in Centigrade
     pycom.rgbled(0x00ff00) # inidicates successful execution of code
+    mlx.deinit()
     print("Max Scene Temp (°C): "+ str(mx)+", "+"Min Scene Temp (°C): "+str(mn)+", "+"Amb Temp (°C): "+ str(amb) )
     time.sleep(1.0)
 except Exception as e:
