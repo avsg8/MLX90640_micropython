@@ -16,8 +16,9 @@ while True:
         ixc = busio.I2C(pins=('P9','P10'), frequency=400000) # read on some forum that 400KHz is the highest baudrate that 
                                                              # wipy can support reliably
         mlx = adafruit_mlx90640.MLX90640(ixc)
-        mlx.refresh_rate = adafruit_mlx90640.RefreshRate.REFRESH_0_5_HZ # higher refresh rates produce 0s for alternate readings. 
-                                                                        # Maybe the microcontroller cannot read as fast?
+        mlx.refresh_rate = adafruit_mlx90640.RefreshRate.REFRESH_0_5_HZ # 2Hz or higher refresh rates produce 0s for alternate pixels, 
+                                                                        # like a checkerboard pattern; maybe the microcontroller cannot
+                                                                        # read as fast?
         frame = [0]*768
         mlx.getFrame(frame)
         mn = round(min(frame),1) # minimum temp in the frame, rounded to 1 decimal
