@@ -13,17 +13,18 @@ time.sleep(2.0)
 while True:
     try:
         pycom.rgbled(0x0000ff) #inidicates start of code block by red led
-        ixc = busio.I2C(pins=('P9','P10'), frequency=400000)
+        ixc = busio.I2C(pins=('P9','P10'), frequency=400000) # read on some forum that 400KHz is the highest baudrate that 
+                                                             # wipy can support reliably
         mlx = adafruit_mlx90640.MLX90640(ixc)
-        mlx.refresh_rate = adafruit_mlx90640.RefreshRate.REFRESH_0_5_HZ # refresh rates high
+        mlx.refresh_rate = adafruit_mlx90640.RefreshRate.REFRESH_0_5_HZ # higher refresh rates produce 0s for alternate readings. 
+                                                                        # Maybe the microcontroller cannot read as fast?
         frame = [0]*768
         mlx.getFrame(frame)
         mn = round(min(frame),1) # minimum temp in the frame, rounded to 1 decimal
         mx = round(max(frame),1) # maximum temp in the frame, rounded to 1 decimal
-        """
-        To get ambient temperature of the board see adafruit_mlx90640's implementation of the method
-
-        """
+        
+        """To get ambient temperature of the board see adafruit_mlx90640's implementation of the method for further clarity. 
+        I just copied that over here."""
         amb = [0]*834
         mlx._GetFrameData(amb)
         amb = mlx._GetTa(amb) - 8.0  # this is ambient temp in Centigrade
