@@ -10,3 +10,4 @@ The adafruit_mlx90640.py is untouched. Only the busio.py and i2c_device.py have 
 
 ## How to use it:
 Just copy the contents of wipy_example to your WiPy 3.0 and boot the microcontroller. If you are connected to a console, you can see the max, min and ambient temperatures being printed out. If you don't have a console, then the alternate flashing of the blue and green led means it is successfully reading data. A red flash means an error occured. 
+Since this is a 'quick & dirty' implementation, mainly for my hobby, it is not robust against many kinds of errors.
