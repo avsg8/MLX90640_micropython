@@ -3,7 +3,7 @@
 ================================================================================
 * Author(s): Avishek Guha (avsg8, @avs_g8), ActuallyHappening
 """
-import machine, micropython, time   # Some libraries that we will use
+import machine, micropython, time, gc   # Some libraries that we will use
 from machine import I2C
 from lib import busio, adafruit_mlx90640
 
@@ -18,6 +18,9 @@ while True:
         mlx.refresh_rate = adafruit_mlx90640.RefreshRate.REFRESH_2_HZ # 2Hz or higher refresh rates produce 0s for alternate pixels, 
                                                                         # like a checkerboard pattern; maybe the microcontroller cannot
                                                                         # read as fast?
+        
+        gc.collect()
+        gc.threshold(gc.mem_free() // 4 + gc.mem_alloc())
                                                                         
         
         import micropython
@@ -45,7 +48,7 @@ while True:
     except Exception as e:
         print(e, end="")
         time.sleep(1.0)
-        #print('raising ...')
+        print('raising ...')
         #print(f"Self._i2c: {self._i2c=}")
-        #raise e
+        raise e
 
