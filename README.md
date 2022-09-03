@@ -11,3 +11,6 @@ The adafruit_mlx90640.py is untouched. Only the busio.py and i2c_device.py have 
 ## How to use it:
 Just copy the contents of esp32_example to your esp based microcontroller and boot it, making sure to place it in the root directory "/" such that `main.py` is executed. If you are connected to a console, you can see basic info being printed out (thonny console used as well as `screen` on mac. If you don't have a console, no other indicator lights are implemented.
 Since this is a 'quick & dirty' implementation, mainly for a short competition, it is not robust against many kinds of errors but will still handle and report the most common errors
+
+# What I did:
+- Installed Adafruit-Blinka using thonny
