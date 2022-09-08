@@ -21,6 +21,9 @@
 # THE SOFTWARE.
 
 """
+NOTE THIS IS CHANGED to work with MicroPython!!
+
+
 `adafruit_mlx90640`
 ================================================================================
 
@@ -44,6 +47,7 @@ import struct
 import math
 import time
 from adafruit_bus_device.i2c_device import I2CDevice
+from micropython import const
 
 __version__ = "0.0.0-auto.0"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_MLX90640.git"
@@ -51,24 +55,24 @@ __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_MLX90640.git"
 # We match the melexis library naming, and don't want to change
 # pylint: disable=invalid-name
 
-eeData = [0] * 832
-I2C_READ_LEN = 2048
-SCALEALPHA = 0.000001
-MLX90640_DEVICEID1 = 0x2407
-OPENAIR_TA_SHIFT = 8
+eeData = [0] * const(832)
+I2C_READ_LEN = const(2048)
+SCALEALPHA = const(0.000001)
+MLX90640_DEVICEID1 = const(0x2407)
+OPENAIR_TA_SHIFT = const(8)
 
 
 class RefreshRate:  # pylint: disable=too-few-public-methods
     """ Enum-like class for MLX90640's refresh rate """
 
-    REFRESH_0_5_HZ = 0b000  # 0.5Hz
-    REFRESH_1_HZ = 0b001  # 1Hz
-    REFRESH_2_HZ = 0b010  # 2Hz
-    REFRESH_4_HZ = 0b011  # 4Hz
-    REFRESH_8_HZ = 0b100  # 8Hz
-    REFRESH_16_HZ = 0b101  # 16Hz
-    REFRESH_32_HZ = 0b110  # 32Hz
-    REFRESH_64_HZ = 0b111  # 64Hz
+    REFRESH_0_5_HZ = const(0b000)  # 0.5Hz
+    REFRESH_1_HZ = const(0b001)  # 1Hz
+    REFRESH_2_HZ = const(0b010) # 2Hz
+    REFRESH_4_HZ = const(0b011)  # 4Hz
+    REFRESH_8_HZ = const(0b100)  # 8Hz
+    REFRESH_16_HZ = const(0b101)  # 16Hz
+    REFRESH_32_HZ = const(0b110)  # 32Hz
+    REFRESH_64_HZ = const(0b111)  # 64Hz
 
 
 class MLX90640:  # pylint: disable=too-many-instance-attributes
