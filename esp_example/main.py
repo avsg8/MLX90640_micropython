@@ -1021,24 +1021,25 @@ class MLX90640:  # pylint: disable=too-many-instance-attributes
 def to_firebase(data):
 #   data = list(map(lambda temp: str(temp), data))
   data=f'{{"json":"{json.dumps(data)}"}}'
-  print(f"Sending data: {data}")
+  # print(f"Sending data: {data}")
+  print(f"Sending Data <removed for efficiency>")
   return requests.put(firebase_url_endpoint, data=data)
 
 def __memory_manage(dump=False):
     gc.collect()
-    _mem_free = gc.mem_free()
-    try:
-        t = bytearray(9160)
-    except MemoryError:
-        print(f"Memory free: {_mem_free}; BUT, printing memory dump (fragmentation)")
-        if dump is None: dump = True # If default, then print when memory full
-    if dump:
-      print("Printing memory dump:")
-      micropython.mem_info(1) 
-      print("----------------------------------------------")
-      input("Press enter to continue ...")
-    else:
-      print(f"Memory free: {_mem_free}")
+    # _mem_free = gc.mem_free()
+    # try:
+    #     t = bytearray(9160)
+    # except MemoryError:
+    #     print(f"Memory free: {_mem_free}; BUT, printing memory dump (fragmentation)")
+    #     if dump is None: dump = True # If default, then print when memory full
+    # if dump:
+    #   print("Printing memory dump:")
+    #   micropython.mem_info(1) 
+    #   print("----------------------------------------------")
+    #   input("Press enter to continue ...")
+    # else:
+    #   print(f"Memory free: {_mem_free}")
 
 def main():
   print("Beginning main ...")
@@ -1046,13 +1047,13 @@ def main():
   w.getGoodWIFI()
   w.printStatus()
   # gc.threshold(gc.mem_free() // 8 + gc.mem_alloc()) # Seriously push the memory managing to the limit! Manages every <n> bytes allocated
-  gc.threshold(1000) # Seriously push the memory managing to the limit! Manages every <n> bytes allocated
+  gc.threshold(5000) # Seriously push the memory managing to the limit! Manages every <n> bytes allocated
   
   __memory_manage()
   
-  ixc = I2C(pins=(6, 5), frequency=160000)
+  ixc = I2C(pins=(6, 5), frequency=800000)
   mlx = MLX90640(ixc)
-  mlx.refresh_rate = RefreshRate.REFRESH_1_HZ
+  mlx.refresh_rate = RefreshRate.REFRESH_2_HZ
   frame = [0]*768
   while True:
       # SCL=6, SDA=5 on QT PY C3
@@ -1073,9 +1074,5 @@ def main():
           #print(f"Self._i2c: {self._i2c=}")
 #           raise e
   
-
 if __name__ == '__main__':
   main()
-
-
-
