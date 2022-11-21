@@ -1,66 +1,106 @@
-# The MIT License (MIT)
-#
-# Copyright (c) 2019 ladyada for Adafruit Industries
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-# THE SOFTWARE.
-
 """
-NOTE THIS IS CHANGED to work with MicroPython!!
-
-
-`adafruit_mlx90640`
-================================================================================
-
-Driver for the MLX90640 thermal camera
-
-
-* Author(s): ladyada
-
-Implementation Notes
---------------------
-
-**Software and Dependencies:**
-
-* Adafruit CircuitPython firmware for the supported boards:
-  https://github.com/adafruit/circuitpython/releases
-* Adafruit's Bus Device library: https://github.com/adafruit/Adafruit_CircuitPython_BusDevice
-* Adafruit's Register library: https://github.com/adafruit/Adafruit_CircuitPython_Register
+Manually Statically compiled optimized code for MicroPython MLX90640 and ESP32-C3 and urequests
 """
-
-import struct
+import machine, network  # type: ignore
 import math
+import struct
+import micropython, time, gc
+from micropython import const# Some libraries that we will use
 import time
-from adafruit_bus_device.i2c_device import I2CDevice
-from micropython import const
+import json
+import secrets
+try:
+    import ussl as ssl # type: ignore
+except:
+    import ssl
+try:
+    import uurequests as requests # type: ignore
+except ImportError:
+    import requests as requests
 
-__version__ = "0.0.0-auto.0"
-__repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_MLX90640.git"
+print("Beginning ...")
 
-# We match the melexis library naming, and don't want to change
-# pylint: disable=invalid-name
+wifi_keys = secrets.get_wifi_keys()
+wifi_known_names = list(wifi_keys.keys())
+wifi_known_passs = list(wifi_keys.values())
+firebase_url_endpoint = secrets.get_firebase_endpoint()
+wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
+class wifi:
+  def scan(self):
+      try:
+        return wlan.scan()
+      except RuntimeError as exc:
+        print(f"{exc}\nNo wifi access points found :(")
+        raise exc
+
+  def networkInScan(self, __scan):
+      print("network names known: ", wifi_known_names)
+      for s in __scan:
+          detected_name = s[0]
+          # print(f"Checking if {detected_name}")
+          if detected_name in wifi_known_names:
+              return True, wifi_known_names.index(detected_name)
+      return False, -1
+
+  def scanNetworks(self, ):
+      return self.networkInScan(self.scan())
+
+  def plsConnect(self, ):
+      can, index = self.scanNetworks()
+      if not can:
+          print('Could not find any known networks :(')
+          print(f"{self.scan()=}")
+          wlan.active(False)
+          time.sleep(5)
+          wlan.active(True)
+          return False
+      else:
+          # print(f"{index=}")
+          wifi_name = wifi_known_names[index]
+          wifi_pass = wifi_known_passs[index]
+          if type(wifi_pass) is not tuple:
+              # print(f'Found wifi: {wifi_name}; Connecting with password: {wifi_pass}')
+              print(f'Found wifi: {wifi_name}; Connecting;')
+              wlan.connect(wifi_name, wifi_pass)
+              # print('Connecting... _')
+              tryNum = 0
+              while not wlan.isconnected() and tryNum < 20:
+                  tryNum += 10
+                  time.sleep(10)
+                  print(f"Connecting ... {str(tryNum)} seconds ...")
+                  
+              return self.isGood(False)
+          elif type(wifi_pass) is tuple:
+              print(
+                  f"Found WPA2 Enterprise wifi: {wifi_name}; Connecting with username: {wifi_pass[0]}")
+              wlan.connect(wifi_name, authmode=network.AUTH_WPA2_ENT,
+                          username=wifi_pass[0], password=wifi_pass[1])
+
+
+  def isGood(self, getGood=False):
+      if getGood:
+          self.plsConnect()
+      return wlan.isconnected()
+
+
+  def getGoodWIFI(self, ):
+      # plsConnect()
+      while not self.isGood():
+          print("Top level attempting WIFI connect ...")
+          self.plsConnect()
+          time.sleep(1)
+      print(f"Got good wifi: {wlan.ifconfig()}")
+
+
+  def printStatus(self, ):
+      print(f"Got good wifi: {wlan.ifconfig()}")
 
 eeData = [0] * const(832)
 I2C_READ_LEN = const(2048)
 SCALEALPHA = const(0.000001)
 MLX90640_DEVICEID1 = const(0x2407)
 OPENAIR_TA_SHIFT = const(8)
-
 
 class RefreshRate:  # pylint: disable=too-few-public-methods
     """ Enum-like class for MLX90640's refresh rate """
@@ -74,6 +114,173 @@ class RefreshRate:  # pylint: disable=too-few-public-methods
     REFRESH_32_HZ = const(0b110)  # 32Hz
     REFRESH_64_HZ = const(0b111)  # 64Hz
 
+class ContextManaged:
+    """An object that automatically deinitializes hardware with a context manager."""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.deinit()
+
+    # pylint: disable=no-self-use
+    def deinit(self):
+        """Free any hardware used by the object."""
+        return
+
+class Lockable(ContextManaged):
+    """An object that must be locked to prevent collisions on a microcontroller resource."""
+
+    _locked = False
+
+    def try_lock(self):
+        """Attempt to grab the lock. Return True on success, False if the lock is already taken."""
+        if self._locked:
+            return False
+        self._locked = True
+        return True
+
+    def unlock(self):
+        """Release the lock so others may use the resource."""
+        if self._locked:
+            self._locked = False
+        else:
+            raise ValueError("Not locked")
+
+class I2C(Lockable):
+    def __init__(self, pins=(21, 22), frequency=100000):
+        self.init(pins, frequency)
+
+    def init(self, pins, frequency):
+        self.deinit()
+        self._pins = (machine.Pin(int(pins[0])), machine.Pin(int(pins[1])))
+        
+        try:
+            #_newI2C = _I2C(0, scl=machine.Pin(21), sda=machine.Pin(22))
+            #print(f"new i2c: {_newI2C=}")
+            #self._i2c = _newI2C
+            #print(f"Self._i2c after: {self._i2c=}")
+            self._i2c = machine.I2C(0, scl=self._pins[0], sda=self._pins[1], freq=frequency)
+        except RuntimeError:
+            raise
+        print(f"Created i2c: {self._i2c}")
+
+    def deinit(self):
+        try:
+            del self._i2c
+        except AttributeError:
+            pass
+
+    def scan(self):
+        return self._i2c.scan()
+
+    def readfrom_into(self, address, buffer, *, start=0, end=None):
+        if start is not 0 or end is not None:
+            if end is None:
+                end = len(buffer)
+            buffer = memoryview(buffer)[start:end]
+        stop = True  # remove for efficiency later
+        return self._i2c.readfrom_into(address, buffer)
+
+    def writeto(self, address, buffer, *, start=0, end=None, stop=True):
+        if isinstance(buffer, str):
+            buffer = bytes([ord(x) for x in buffer])
+        if start is not 0 or end is not None:
+            if end is None:
+                return self._i2c.writeto(address, memoryview(buffer)[start:], stop)
+            else:
+                return self._i2c.writeto(address, memoryview(buffer)[start:end], stop)
+        return self._i2c.writeto(address, buffer, stop)
+
+class I2CDevice:
+    def __init__(self, i2c, device_address, probe=True):
+        self.i2c = i2c
+        self._has_write_read = False # hasattr(self.i2c, "writeto_then_readfrom") --> has been turned to False
+        self.device_address = device_address
+
+        if probe:
+            self.__probe_for_device()
+
+    def readinto(self, buf, *, start=0, end=None):
+        if end is None:
+            end = len(buf)
+        self.i2c.readfrom_into(self.device_address, buf, start=start, end=end)
+
+    def write(self, buf, *, start=0, end=None, stop=True):
+        if end is None:
+            end = len(buf)
+        self.i2c.writeto(self.device_address, buf, start=start, end=end, stop=stop)
+
+    # pylint: disable-msg=too-many-arguments
+    def write_then_readinto(
+        self,
+        out_buffer,
+        in_buffer,
+        *,
+        out_start=0,
+        out_end=None,
+        in_start=0,
+        in_end=None,
+        stop=False
+    ):
+        if out_end is None:
+            out_end = len(out_buffer)
+        if in_end is None:
+            in_end = len(in_buffer)
+        if stop:
+            raise ValueError("Stop must be False. Use writeto instead.")
+        if self._has_write_read:
+            #print("c",dir(self.i2c))
+            # In linux, at least, this is a special kernel function call
+            self.i2c.writeto_then_readfrom(
+                self.device_address,
+                out_buffer,
+                in_buffer,
+                out_start=out_start,
+                out_end=out_end,
+                in_start=in_start,
+                in_end=in_end,
+            )
+
+        else:
+            # If we don't have a special implementation, we can fake it with two calls
+            self.i2c.writeto(self.device_address, out_buffer, stop=False) # These lines have been changed to make it work with wipy micropython I2C module
+            #self.write(out_buffer, start=out_start, end=out_end, stop=False)
+            #self.readinto(in_buffer, start=in_start, end=in_end)
+            self.i2c.readfrom_into(self.device_address, in_buffer) # These lines have been changed to make it work with wipy micropython I2C module 
+
+
+    # pylint: enable-msg=too-many-arguments
+
+    def __enter__(self):
+        while not self.i2c.try_lock():
+            pass
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.i2c.unlock()
+        return False
+
+    def __probe_for_device(self):
+        """
+        Try to read a byte from an address,
+        if you get an OSError it means the device is not there
+        or that the device does not support these means of probing
+        """
+        while not self.i2c.try_lock():
+            pass
+        try:
+            self.i2c.writeto(self.device_address, b"")
+        except OSError:
+            # some OS's dont like writing an empty bytesting...
+            # Retry by reading a byte
+            try:
+                result = bytearray(1)
+                self.i2c.readfrom_into(self.device_address, result)
+            except OSError:
+                raise ValueError("No I2C device at address: %x" % self.device_address)
+        finally:
+            self.i2c.unlock()
 
 class MLX90640:  # pylint: disable=too-many-instance-attributes
     """Interface to the MLX90640 temperature sensor."""
@@ -373,25 +580,6 @@ class MLX90640:  # pylint: disable=too-many-instance-attributes
         self._ExtractKvPixelParameters()
         self._ExtractCILCParameters()
         self._ExtractDeviatingPixels()
-
-        # debug output
-        # print('-'*40)
-        # print("kVdd = %d, vdd25 = %d" % (self.kVdd, self.vdd25))
-        # print("KvPTAT = %f, KtPTAT = %f, vPTAT25 = %d, alphaPTAT = %f" %
-        #      (self.KvPTAT, self.KtPTAT, self.vPTAT25, self.alphaPTAT))
-        # print("Gain = %d, Tgc = %f, Resolution = %d" % (self.gainEE, self.tgc, self.resolutionEE))
-        # print("KsTa = %f, ksTo = %s, ct = %s" % (self.KsTa, self.ksTo, self.ct))
-        # print("cpAlpha:", self.cpAlpha, "cpOffset:", self.cpOffset)
-        # print("alpha: ", self.alpha)
-        # print("alphascale: ", self.alphaScale)
-        # print("offset: ", self.offset)
-        # print("kta:", self.kta)
-        # print("ktaScale:", self.ktaScale)
-        # print("kv:", self.kv)
-        # print("kvScale:", self.kvScale)
-        # print("calibrationModeEE:", self.calibrationModeEE)
-        # print("ilChessC:", self.ilChessC)
-        # print('-'*40)
 
     def _ExtractVDDParameters(self):
         # extract VDD
@@ -794,6 +982,8 @@ class MLX90640:  # pylint: disable=too-many-instance-attributes
         # print("dataCheck: 0x%x" % dataCheck[0])
         # if (dataCheck != data):
         #    return -2
+    
+    _inbuf = bytearray(2 * I2C_READ_LEN)
 
     def _I2CReadWords(self, addr, buffer, *, end=None):
         # stamp = time.monotonic()
@@ -803,7 +993,8 @@ class MLX90640:  # pylint: disable=too-many-instance-attributes
             remainingWords = end
         offset = 0
         addrbuf = bytearray(2)
-        inbuf = bytearray(2 * I2C_READ_LEN)
+        # inbuf = bytearray(2 * I2C_READ_LEN)
+        inbuf = self._inbuf
 
         with self.i2c_device as i2c:
             while remainingWords:
@@ -814,6 +1005,9 @@ class MLX90640:  # pylint: disable=too-many-instance-attributes
                     addrbuf, inbuf, in_end=read_words * 2
                 )  # in bytes
                 # print("-> ", [hex(i) for i in addrbuf])
+                
+                __memory_manage()
+                
                 outwords = struct.unpack(
                     ">" + "H" * read_words, inbuf[0 : read_words * 2]
                 )
@@ -823,5 +1017,62 @@ class MLX90640:  # pylint: disable=too-many-instance-attributes
                 offset += read_words
                 remainingWords -= read_words
                 addr += read_words
-        # print("i2c read", read_words, "words in", time.monotonic()-stamp)
-        # print("Read: ", [hex(i) for i in buffer[0:10]])
+
+def to_firebase(data):
+#   data = list(map(lambda temp: str(temp), data))
+  data=f'{{"json":"{json.dumps(data)}"}}'
+  # print(f"Sending data: {data}")
+  print(f"Sending Data <removed for efficiency>")
+  return requests.put(firebase_url_endpoint, data=data)
+
+def __memory_manage(dump=False):
+    gc.collect()
+    # _mem_free = gc.mem_free()
+    # try:
+    #     t = bytearray(9160)
+    # except MemoryError:
+    #     print(f"Memory free: {_mem_free}; BUT, printing memory dump (fragmentation)")
+    #     if dump is None: dump = True # If default, then print when memory full
+    # if dump:
+    #   print("Printing memory dump:")
+    #   micropython.mem_info(1) 
+    #   print("----------------------------------------------")
+    #   input("Press enter to continue ...")
+    # else:
+    #   print(f"Memory free: {_mem_free}")
+
+def main():
+  print("Beginning main ...")
+  w = wifi()
+  w.getGoodWIFI()
+  w.printStatus()
+  # gc.threshold(gc.mem_free() // 8 + gc.mem_alloc()) # Seriously push the memory managing to the limit! Manages every <n> bytes allocated
+  gc.threshold(5000) # Seriously push the memory managing to the limit! Manages every <n> bytes allocated
+  
+  __memory_manage()
+  
+  ixc = I2C(pins=(6, 5), frequency=800000)
+  mlx = MLX90640(ixc)
+  mlx.refresh_rate = RefreshRate.REFRESH_2_HZ
+  frame = [0]*768
+  while True:
+      # SCL=6, SDA=5 on QT PY C3
+      try:
+          print("Querying camera ...\n")
+          mlx.getFrame(frame)
+          # print(f"Frame received! {frame}")
+          print(f"Frame received!")
+          to_firebase(frame)
+          
+          __memory_manage()
+          
+          
+      except Exception as e:
+          print(e)
+          time.sleep(1.0)
+#           print('raising ...')
+          #print(f"Self._i2c: {self._i2c=}")
+#           raise e
+  
+if __name__ == '__main__':
+  main()
